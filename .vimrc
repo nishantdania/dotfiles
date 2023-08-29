@@ -186,7 +186,9 @@ let g:ale_set_highlights = 0
 
 " Prettier ALE
 let g:ale_fixers = {
-      \   'javascript': ['prettier'],
+      \   'javascript': ['prettier', 'eslint'],
+      \   'typescript': ['prettier', 'eslint'],
+      \   'typescriptreact': ['prettier', 'eslint'],
       \   'css': ['prettier'],
       \   'jsx': ['prettier'],
       \}
