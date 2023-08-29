@@ -81,32 +81,34 @@ endif
 " ----------------------------------------------------------------------
 " Ale
 " Use Coc for lsp
-" let g:ale_disable_lsp = 1
+let g:ale_disable_lsp = 1
 " Enable airline for diagnostics
-" let g:airline#extensions#ale#enabled = 1
+let g:airline#extensions#ale#enabled = 1
 
 " Load plugins
 " ----------------------------------------------------------------------
 call plug#begin('~/.vim/plugged')
   Plug 'morhetz/gruvbox', { 'as': 'gruvbox' }
-"   Plug 'tpope/vim-commentary'
-"   Plug 'tpope/vim-fugitive'
+  Plug 'tpope/vim-commentary'
+  Plug 'tpope/vim-fugitive'
 "  Plug 'tpope/vim-surround'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
-"  Plug 'styled-components/vim-styled-components', { 'branch': 'main' }
+  Plug 'styled-components/vim-styled-components', { 'branch': 'main' }
 "  Plug 'joukevandermaas/vim-ember-hbs'
-"  Plug 'vim-airline/vim-airline'
-"  Plug 'neoclide/coc.nvim', {'branch': 'release'}
-"  Plug 'dense-analysis/ale'
+  Plug 'vim-airline/vim-airline'
+  Plug 'neoclide/coc.nvim', {'branch': 'release'}
+  Plug 'dense-analysis/ale'
 "  Plug 'jiangmiao/auto-pairs'
 "  Plug 'airblade/vim-gitgutter'
 "  Plug 'tpope/vim-rhubarb'
 "  Plug 'christoomey/vim-tmux-navigator'
 "  Plug 'udalov/kotlin-vim'
 "  Plug 'martinda/Jenkinsfile-vim-syntax'
-"  Plug 'peitalin/vim-jsx-typescript'
-"  Plug 'leafgarland/typescript-vim'
+  Plug 'pangloss/vim-javascript'    " JavaScript support
+  Plug 'leafgarland/typescript-vim' " TypeScript syntax
+  Plug 'maxmellon/vim-jsx-pretty'   " JS and JSX syntax
+  Plug 'jparise/vim-graphql'        " GraphQL syntax
 call plug#end()
 
 " ----------------------------------------------------------------------
@@ -154,6 +156,9 @@ command! -bang -nargs=* Rg
 "set nobackup
 "set nowritebackup
 
+" CoC extensions
+let g:coc_global_extensions = ['coc-tsserver']
+
 " Having longer updatetime (default is 4000 ms = 4 s) leads to noticeable
 " delays and poor user experience.
 "set updatetime=500
@@ -173,11 +178,22 @@ command! -bang -nargs=* Rg
 " Ale
 " ----------------------------------------------------------------------
 " Signs for ale
-"let g:ale_sign_error = '‣'
-"let g:ale_sign_warning = '‣'
+let g:ale_sign_error = '‣'
+let g:ale_sign_warning = '‣'
 
 " Disable all highlights since they add clutter
-"let g:ale_set_highlights = 0
+let g:ale_set_highlights = 0
+
+" Prettier ALE
+let g:ale_fixers = {
+      \   'javascript': ['prettier'],
+      \   'css': ['prettier'],
+      \   'jsx': ['prettier'],
+      \}
+augroup FiletypeGroup
+  autocmd!
+  au BufNewFile,BufRead *.jsx set filetype=javascript.jsx
+augroup END
 
 " ----------------------------------------------------------------------
 " MAPPINGS
