@@ -25,7 +25,7 @@ augroup END
 
 " Show relative numbers with numberWidth = 5
 set number
-set relativenumber
+" set relativenumber
 
 " Soft tabs
 set tabstop=2
