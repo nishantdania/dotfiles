@@ -109,6 +109,7 @@ call plug#begin('~/.vim/plugged')
   Plug 'leafgarland/typescript-vim' " TypeScript syntax
   Plug 'maxmellon/vim-jsx-pretty'   " JS and JSX syntax
   Plug 'jparise/vim-graphql'        " GraphQL syntax
+  Plug 'vim-test/vim-test'
 call plug#end()
 
 " ----------------------------------------------------------------------
@@ -192,6 +193,7 @@ let g:ale_fixers = {
       \   'css': ['prettier'],
       \   'jsx': ['prettier'],
       \}
+let g:ale_fix_on_save = 1
 augroup FiletypeGroup
   autocmd!
   au BufNewFile,BufRead *.jsx set filetype=javascript.jsx
@@ -259,7 +261,7 @@ nnoremap <leader><leader> :FZF<CR>
 "nnoremap gs :Git<CR>
 
 " Git blame using fugitive
-"nnoremap gb :Git blame<CR>
+nnoremap gb :Git blame<CR>
 
 " Git diff in split using fugitive
 "nnoremap gd :Gdiff<CR>
@@ -291,3 +293,6 @@ nnoremap <C-w> :tabc<CR>
 "nnoremap <silent> <leader>j :TmuxNavigateDown<cr>
 "nnoremap <silent> <leader>k :TmuxNavigateUp<cr>
 "nnoremap <silent> <leader>l :TmuxNavigateRight<cr>
+
+" Mappings for running tests
+nmap <silent> <leader>t :TestNearest<CR>
