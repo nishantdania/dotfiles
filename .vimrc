@@ -110,6 +110,7 @@ call plug#begin('~/.vim/plugged')
   Plug 'maxmellon/vim-jsx-pretty'   " JS and JSX syntax
   Plug 'jparise/vim-graphql'        " GraphQL syntax
   Plug 'vim-test/vim-test'
+  Plug 'github/copilot.vim'
 call plug#end()
 
 " ----------------------------------------------------------------------
@@ -274,10 +275,11 @@ nnoremap gb :Git blame<CR>
 "vnoremap gh :Gbrowse<CR>
 
 " Copy visually selected text
-vnoremap <C-c> :w !pbcopy<CR>
+" vnoremap <C-c> :w !pbcopy<CR>
+vnoremap <C-c> "+y<CR>
 
 " Paste text from clipboard
-nnoremap <C-v> :r !pbpaste<CR>
+" nnoremap <C-v> :r !pbpaste<CR>
 
 " Substitute across all quickfix files
 "nnoremap <Leader>r :cdo %s///ge \| update<C-b><Right><Right><Right><Right><Right><Right><Right>
