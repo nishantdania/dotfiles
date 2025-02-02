@@ -45,3 +45,6 @@ vim.opt.mouse = ""
 
 -- Save undo history
 vim.opt.undofile = true
+
+-- Let statusline show this
+vim.o.showmode = false
