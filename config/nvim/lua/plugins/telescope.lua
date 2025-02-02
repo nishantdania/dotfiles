@@ -12,6 +12,7 @@ return {
 		pickers = {
 			find_files = {
 				hidden = true,
+				disable_devicons = true,
 			},
 			git_files = {
 				hidden = true,
