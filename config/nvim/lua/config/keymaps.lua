@@ -1,5 +1,5 @@
 -- Open Netrw explorer
-vim.keymap.set("n", "<leader>f", "<CMD>Vex<CR>")
+vim.keymap.set("n", "<leader>f", "<CMD>Vex!<CR>")
 
 -- Only
 vim.keymap.set("n", "<leader>o", "<CMD>only<CR>")
