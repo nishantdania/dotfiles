@@ -15,6 +15,7 @@ return {
 				"embedded_template",
 				"lua",
 				"diff",
+				"svelte",
 			},
 			sync_install = true,
 			highlight = {

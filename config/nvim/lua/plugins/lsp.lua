@@ -31,6 +31,7 @@ return {
 				-- "ruby_lsp",
 				"ts_ls",
 				"html-lsp",
+				"svelte-language-server",
 			}
 
 			local ensure_installed = servers or {}
@@ -43,11 +44,7 @@ return {
 
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
-			require("mason-lspconfig").setup_handlers({
-				function(server_name)
-					require("lspconfig")[server_name].setup({})
-				end,
-			})
+			require("mason-lspconfig").setup({ automatic_enable = true })
 
 			require("lspconfig").ruby_lsp.setup({
 				filetypes = { "ruby" },
