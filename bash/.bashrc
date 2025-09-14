@@ -16,6 +16,8 @@ source ~/.local/share/omarchy/default/bash/rc
 # Aliases: Git
 alias glg='git log'
 alias gst='git status'
-alias gco='git checkout'
+alias gd='git diff'
+alias gaa='git add .'
 alias gb='git branch'
+alias gco='git checkout'
 alias gp='git push'
