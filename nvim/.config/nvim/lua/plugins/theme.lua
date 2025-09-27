@@ -1,1 +1,0 @@
-/home/nishant/.config/omarchy/current/theme/neovim.lua
