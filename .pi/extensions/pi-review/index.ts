@@ -62,6 +62,7 @@ export default function (pi: ExtensionAPI) {
       // Ghostty runs windows in one shared process, so PID ancestry cannot
       // identify a window. Give this terminal a session-specific OSC title and
       // accept captures only when that exact Ghostty window is focused.
+      // Requirement: tmux must use `set -g set-titles on` to forward this title.
       const terminalTag = `[pi-review:${sessionId}]`;
       // During initial startup Pi sets its normal title after session_start.
       // Defer ours so it is not immediately overwritten (on /reload it wasn't).
