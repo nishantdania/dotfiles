@@ -29,6 +29,7 @@ export default function (pi: ExtensionAPI) {
   let watcher: ChildProcess | undefined;
   let uiDaemon: ChildProcess | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
+  let titleTimer: ReturnType<typeof setTimeout> | undefined;
   let consuming = false;
 
   const addQueuedNotesToEditor = async (ctx: ExtensionContext) => {
@@ -62,7 +63,12 @@ export default function (pi: ExtensionAPI) {
       // identify a window. Give this terminal a session-specific OSC title and
       // accept captures only when that exact Ghostty window is focused.
       const terminalTag = `[pi-review:${sessionId}]`;
-      ctx.ui.setTitle(`π ${terminalTag}`);
+      // During initial startup Pi sets its normal title after session_start.
+      // Defer ours so it is not immediately overwritten (on /reload it wasn't).
+      titleTimer = setTimeout(() => {
+        titleTimer = undefined;
+        ctx.ui.setTitle(`π ${terminalTag}`);
+      }, 100);
       const env = { ...process.env, PI_REVIEW_SESSION: sessionId, PI_REVIEW_QUEUE: queueDir, PI_REVIEW_SOCKET: reviewSocket, PI_REVIEW_TITLE_TAG: terminalTag };
       // Keep GTK/theme resources warm. Copy events only send text over this socket.
       uiDaemon = spawn("python3", [daemon], { stdio: "ignore", env });
@@ -75,6 +81,7 @@ export default function (pi: ExtensionAPI) {
     watcher?.kill("SIGTERM"); watcher = undefined;
     uiDaemon?.kill("SIGTERM"); uiDaemon = undefined;
     if (timer) clearInterval(timer); timer = undefined;
+    if (titleTimer) clearTimeout(titleTimer); titleTimer = undefined;
   });
 
   pi.registerCommand("review-clear", {
