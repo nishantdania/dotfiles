@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 3 ]]; then
+  echo "usage: launch-pi <outpost> <tmux-name> <working-directory>" >&2
+  exit 2
+fi
+
+vm=$1
+session=$2
+directory=$3
+
+if [[ ! $session =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo "tmux name may contain only letters, numbers, underscores, and hyphens" >&2
+  exit 2
+fi
+if [[ $directory != /* ]]; then
+  echo "working directory must be absolute" >&2
+  exit 2
+fi
+
+prompt=$(mktemp)
+trap 'rm -f "$prompt"' EXIT
+cat > "$prompt"
+if [[ ! -s $prompt ]]; then
+  echo "remote Pi prompt is empty" >&2
+  exit 2
+fi
+
+prompt_path="/root/.outpost/prompts/$session"
+outpost cp --mode 600 "$prompt" "$vm:$prompt_path" >/dev/null
+
+directory64=$(printf '%s' "$directory" | base64 -w0)
+outpost exec "$vm" "set -eu; directory=\$(printf %s $directory64 | base64 -d); test -d \"\$directory\"; ! tmux has-session -t $session 2>/dev/null; tmux new-session -d -s $session -c \"\$directory\" 'exec /root/.local/bin/mise exec node@latest -- pi \"\$(cat $prompt_path)\"'; tmux has-session -t $session"
+
+printf 'Started %s in %s.\n' "$session" "$vm"

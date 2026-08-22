@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: bootstrap <outpost>" >&2
+  exit 2
+fi
+
+vm=$1
+config=${OUTPOST_CONFIG:-$HOME/.config/outpost/config.json}
+ssh_host=$(jq -er '.ssh_host' "$config")
+
+record=$(outpost list | awk -F '\t' -v vm="$vm" '$1 == vm || $2 == vm { print $0; exit }')
+if [[ -z $record ]]; then
+  echo "outpost not found: $vm" >&2
+  exit 1
+fi
+id=$(printf '%s\n' "$record" | awk -F '\t' '{print $1}')
+status=$(printf '%s\n' "$record" | awk -F '\t' '{print $3}')
+if [[ $status != running ]]; then
+  outpost start "$id"
+fi
+
+outpost exec "$vm" 'set -eu
+packages=""
+command -v curl >/dev/null 2>&1 || packages="$packages curl ca-certificates"
+command -v git >/dev/null 2>&1 || packages="$packages git"
+command -v gh >/dev/null 2>&1 || packages="$packages gh"
+command -v tmux >/dev/null 2>&1 || packages="$packages tmux"
+command -v xz >/dev/null 2>&1 || packages="$packages xz-utils"
+ldconfig -p 2>/dev/null | grep -q libatomic.so.1 || packages="$packages libatomic1"
+if [[ -n $packages ]]; then
+  export DEBIAN_FRONTEND=noninteractive
+  dpkg --configure -a >/dev/null 2>&1 || true
+  apt-get clean
+  apt-get update >/dev/null
+  apt-get install -y --no-install-recommends $packages >/dev/null
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+fi'
+
+outpost exec "$vm" 'set -eu
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+export TMPDIR="$HOME/.cache/outpost-tmp"
+mkdir -p "$TMPDIR"
+rm -rf /tmp/tmp.* 2>/dev/null || true
+if ! command -v mise >/dev/null 2>&1; then
+  curl -fsSL https://mise.run | sh >/dev/null
+fi
+mise use --global node@latest >/dev/null
+mise reshim
+activation='"'"'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"'"'"'
+touch "$HOME/.bashrc" "$HOME/.bash_profile"
+grep -Fqx "$activation" "$HOME/.bashrc" || printf "%s\n" "$activation" >> "$HOME/.bashrc"
+grep -Fqx '"'"'source "$HOME/.bashrc"'"'"' "$HOME/.bash_profile" || printf '"'"'%s\n'"'"' '"'"'source "$HOME/.bashrc"'"'"' >> "$HOME/.bash_profile"
+if ! mise exec node@latest -- pi --version >/dev/null 2>&1; then
+  mise exec node@latest -- bash -c '"'"'curl -fsSL https://pi.dev/install.sh | sh >/dev/null'"'"'
+  mise reshim
+fi'
+
+if ssh "$ssh_host" 'test -s ~/.pi/agent/auth.json'; then
+  outpost cp --mode 600 host:~/.pi/agent/auth.json "$vm:/root/.pi/agent/auth.json" >/dev/null
+else
+  echo "Pi authentication is missing on the Outpost host" >&2
+  exit 1
+fi
+
+if ssh "$ssh_host" 'test -s ~/.config/git/config'; then
+  outpost cp --mode 600 host:~/.config/git/config "$vm:/root/.config/git/config" >/dev/null
+elif ssh "$ssh_host" 'test -s ~/.gitconfig'; then
+  outpost cp --mode 600 host:~/.gitconfig "$vm:/root/.gitconfig" >/dev/null
+fi
+
+if ! outpost exec "$vm" 'gh auth status --hostname github.com >/dev/null 2>&1' >/dev/null 2>&1; then
+  ssh "$ssh_host" 'gh auth token --hostname github.com' | outpost exec -i "$vm" 'gh auth login --hostname github.com --git-protocol https --with-token' >/dev/null
+fi
+outpost exec "$vm" 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"; gh auth setup-git; command -v git >/dev/null; command -v tmux >/dev/null; mise exec node@latest -- pi --version >/dev/null; gh auth status --hostname github.com >/dev/null 2>&1'
+
+printf 'Bootstrapped %s\n' "$vm"
