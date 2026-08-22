@@ -9,9 +9,14 @@ fi
 
 host=$1
 vm=$2
-outpost=(outpost --host "$host")
+outpost=(outpost)
+if [[ $host != default ]]; then outpost+=(--host "$host"); fi
 config=${OUTPOST_CONFIG:-$HOME/.config/outpost/config.json}
-ssh_host=$(jq -er --arg host "$host" 'if .hosts then .hosts[$host].ssh_host else .ssh_host end' "$config")
+if [[ $host == default ]]; then
+  ssh_host=$(jq -er 'if .hosts then .hosts[.default_host].ssh_host else .ssh_host end' "$config")
+else
+  ssh_host=$(jq -er --arg host "$host" 'if .hosts then .hosts[$host].ssh_host else .ssh_host end' "$config")
+fi
 
 record=$("${outpost[@]}" list | awk -F '\t' -v vm="$vm" '$1 == vm || $2 == vm { print $0; exit }')
 if [[ -z $record ]]; then

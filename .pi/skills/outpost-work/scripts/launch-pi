@@ -13,7 +13,8 @@ session=$3
 directory=$4
 model=$5
 reasoning=$6
-outpost=(outpost --host "$host")
+outpost=(outpost)
+if [[ $host != default ]]; then outpost+=(--host "$host"); fi
 
 if [[ ! $session =~ ^[a-zA-Z0-9_-]+$ ]]; then
   echo "tmux name may contain only letters, numbers, underscores, and hyphens" >&2
