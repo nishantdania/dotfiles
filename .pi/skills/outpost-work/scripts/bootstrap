@@ -59,16 +59,16 @@ if ! mise exec node@latest -- pi --version >/dev/null 2>&1; then
 fi'
 
 if ssh "$ssh_host" 'test -s ~/.pi/agent/auth.json'; then
-  outpost cp --mode 600 host:~/.pi/agent/auth.json "$vm:/root/.pi/agent/auth.json" >/dev/null
+  outpost copy --mode 600 host:~/.pi/agent/auth.json "$vm:/root/.pi/agent/auth.json" >/dev/null
 else
   echo "Pi authentication is missing on the Outpost host" >&2
   exit 1
 fi
 
 if ssh "$ssh_host" 'test -s ~/.config/git/config'; then
-  outpost cp --mode 600 host:~/.config/git/config "$vm:/root/.config/git/config" >/dev/null
+  outpost copy --mode 600 host:~/.config/git/config "$vm:/root/.config/git/config" >/dev/null
 elif ssh "$ssh_host" 'test -s ~/.gitconfig'; then
-  outpost cp --mode 600 host:~/.gitconfig "$vm:/root/.gitconfig" >/dev/null
+  outpost copy --mode 600 host:~/.gitconfig "$vm:/root/.gitconfig" >/dev/null
 fi
 
 if ! outpost exec "$vm" 'gh auth status --hostname github.com >/dev/null 2>&1' >/dev/null 2>&1; then

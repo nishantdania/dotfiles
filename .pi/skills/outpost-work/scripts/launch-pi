@@ -38,7 +38,7 @@ if [[ ! -s $prompt ]]; then
 fi
 
 prompt_path="/root/.outpost/prompts/$session"
-outpost cp --mode 600 "$prompt" "$vm:$prompt_path" >/dev/null
+outpost copy --mode 600 "$prompt" "$vm:$prompt_path" >/dev/null
 
 directory64=$(printf '%s' "$directory" | base64 -w0)
 outpost exec "$vm" "set -eu; directory=\$(printf %s $directory64 | base64 -d); test -d \"\$directory\"; ! tmux has-session -t $session 2>/dev/null; tmux new-session -d -s $session -c \"\$directory\" 'exec /root/.local/bin/mise exec node@latest -- pi --model $model --thinking $reasoning \"\$(cat $prompt_path)\"'; tmux has-session -t $session"
