@@ -58,21 +58,35 @@ if ! mise exec node@latest -- pi --version >/dev/null 2>&1; then
   mise reshim
 fi'
 
-if ssh "$ssh_host" 'test -s ~/.pi/agent/auth.json'; then
-  outpost copy --mode 600 host:~/.pi/agent/auth.json "$vm:/root/.pi/agent/auth.json" >/dev/null
+if [[ $ssh_host == local ]]; then
+  pi_auth=$HOME/.pi/agent/auth.json
+  git_config=$HOME/.config/git/config
+  git_config_fallback=$HOME/.gitconfig
+else
+  pi_auth='host:~/.pi/agent/auth.json'
+  git_config='host:~/.config/git/config'
+  git_config_fallback='host:~/.gitconfig'
+fi
+
+if { [[ $ssh_host == local ]] && [[ -s $HOME/.pi/agent/auth.json ]]; } || { [[ $ssh_host != local ]] && ssh "$ssh_host" 'test -s ~/.pi/agent/auth.json'; }; then
+  outpost copy --mode 600 "$pi_auth" "$vm:/root/.pi/agent/auth.json" >/dev/null
 else
   echo "Pi authentication is missing on the Outpost host" >&2
   exit 1
 fi
 
-if ssh "$ssh_host" 'test -s ~/.config/git/config'; then
-  outpost copy --mode 600 host:~/.config/git/config "$vm:/root/.config/git/config" >/dev/null
-elif ssh "$ssh_host" 'test -s ~/.gitconfig'; then
-  outpost copy --mode 600 host:~/.gitconfig "$vm:/root/.gitconfig" >/dev/null
+if { [[ $ssh_host == local ]] && [[ -s $HOME/.config/git/config ]]; } || { [[ $ssh_host != local ]] && ssh "$ssh_host" 'test -s ~/.config/git/config'; }; then
+  outpost copy --mode 600 "$git_config" "$vm:/root/.config/git/config" >/dev/null
+elif { [[ $ssh_host == local ]] && [[ -s $HOME/.gitconfig ]]; } || { [[ $ssh_host != local ]] && ssh "$ssh_host" 'test -s ~/.gitconfig'; }; then
+  outpost copy --mode 600 "$git_config_fallback" "$vm:/root/.gitconfig" >/dev/null
 fi
 
 if ! outpost exec "$vm" 'gh auth status --hostname github.com >/dev/null 2>&1' >/dev/null 2>&1; then
-  ssh "$ssh_host" 'gh auth token --hostname github.com' | outpost exec -i "$vm" 'gh auth login --hostname github.com --git-protocol https --with-token' >/dev/null
+  if [[ $ssh_host == local ]]; then
+    gh auth token --hostname github.com
+  else
+    ssh "$ssh_host" 'gh auth token --hostname github.com'
+  fi | outpost exec -i "$vm" 'gh auth login --hostname github.com --git-protocol https --with-token' >/dev/null
 fi
 outpost exec "$vm" 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"; gh auth setup-git; command -v git >/dev/null; command -v tmux >/dev/null; mise exec node@latest -- pi --version >/dev/null; gh auth status --hostname github.com >/dev/null 2>&1'
 
