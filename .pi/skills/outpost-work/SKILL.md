@@ -19,6 +19,7 @@ Run `outpost help` whenever command discovery is needed or the user asks what Ou
 - Never work directly on `main` or `master` unless the user explicitly requests it.
 - Never print credentials or use shell tracing during credential provisioning.
 - Treat local repository context as a hint, not a constraint. A task may involve a different repository, multiple repositories, or no repository.
+- Outpost lifecycle and access commands accept either an ID or name. Prefer the confirmed Outpost name in `start`, `stop`, `delete`, `ssh`, `exec`, and `copy` commands instead of looking up a UUID.
 - The guest user is `root` and its home is `/root`. Never assume `/home/pi` or a `pi` Unix user exists. For work without a repository, default to `/root`. For repositories, default to `/root/<repository-name>` unless the user requests another path.
 - After launch, do not proactively monitor, attach, clean up, stop, or delete anything. If the user explicitly asks to check output, inspect status, attach, stop, delete, or otherwise interact with the launched work, comply normally. Never refuse a follow-up because the initial workflow is fire-and-forget.
 - Use the configured `default_host` unless the user specifies another host.
