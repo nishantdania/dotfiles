@@ -19,6 +19,7 @@ Run `outpost help` whenever command discovery is needed or the user asks what Ou
 - Never work directly on `main` or `master` unless the user explicitly requests it.
 - Never print credentials or use shell tracing during credential provisioning.
 - Treat local repository context as a hint, not a constraint. A task may involve a different repository, multiple repositories, or no repository.
+- The guest user is `root` and its home is `/root`. Never assume `/home/pi` or a `pi` Unix user exists. For work without a repository, default to `/root`. For repositories, default to `/root/<repository-name>` unless the user requests another path.
 - Do not monitor, attach to, clean up, stop, or delete the Outpost after launch.
 - Use the configured `default_host` unless the user specifies another host.
 - For a new Outpost, use 2 vCPU, 4 GiB RAM, and 8 GiB disk unless the user specifies different resources. In CLI commands, write these sizes as `--memory 4G --disk 8G`; Outpost accepts `M`, `MB`, `G`, or `GB`, not `MiB` or `GiB`.
@@ -75,7 +76,8 @@ After confirmation:
 The helper idempotently installs Git, GitHub CLI, tmux, and mise; installs the latest Node.js through mise; and installs Pi under that Node.js version. Repositories can then select their own tool versions with mise. The helper also provisions host Pi authentication, host Git configuration, and keyring-backed GitHub authentication when missing.
 
 3. Prepare repositories with `outpost --host <host> exec` according to the confirmed plan. Clone or fetch each repository and create or checkout its confirmed working branch. This is agent reasoning; do not delegate repository selection or branch policy to the helper scripts.
-4. Send the exact confirmed prompt to the launch helper on stdin:
+4. Before launch, verify that the exact confirmed working directory exists inside the guest. For a repository task, it must be the prepared clone path. For a task without a repository, use `/root` or explicitly create the confirmed directory. Do not invent a different path after confirmation.
+5. Send the exact confirmed prompt to the launch helper on stdin:
 
 ```bash
 printf '%s' "$PROMPT" | ~/.pi/agent/skills/outpost-work/scripts/launch-pi <host> <outpost> <tmux-name> <working-directory> <model> <reasoning>
@@ -83,7 +85,7 @@ printf '%s' "$PROMPT" | ~/.pi/agent/skills/outpost-work/scripts/launch-pi <host>
 
 Use a safe method such as a quoted heredoc instead of shell interpolation when the prompt contains arbitrary text.
 
-5. Once the helper confirms tmux started, respond only:
+6. Once the helper confirms tmux started, respond only:
 
 ```text
 Started <tmux-name> in <outpost>.

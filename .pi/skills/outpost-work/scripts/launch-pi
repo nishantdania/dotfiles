@@ -44,6 +44,6 @@ prompt_path="/root/.outpost/prompts/$session"
 "${outpost[@]}" copy --mode 600 "$prompt" "$vm:$prompt_path" >/dev/null
 
 directory64=$(printf '%s' "$directory" | base64 -w0)
-"${outpost[@]}" exec "$vm" "set -eu; directory=\$(printf %s $directory64 | base64 -d); test -d \"\$directory\"; ! tmux has-session -t $session 2>/dev/null; tmux new-session -d -s $session -c \"\$directory\" 'exec /root/.local/bin/mise exec node@latest -- pi --model $model --thinking $reasoning \"\$(cat $prompt_path)\"'; tmux has-session -t $session"
+"${outpost[@]}" exec "$vm" "set -eu; directory=\$(printf %s $directory64 | base64 -d); if ! test -d \"\$directory\"; then echo \"working directory does not exist: \$directory\" >&2; exit 1; fi; ! tmux has-session -t $session 2>/dev/null; tmux new-session -d -s $session -c \"\$directory\" 'exec /root/.local/bin/mise exec node@latest -- pi --model $model --thinking $reasoning \"\$(cat $prompt_path)\"'; tmux has-session -t $session"
 
 printf 'Started %s in %s.\n' "$session" "$vm"
