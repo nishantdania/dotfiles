@@ -21,6 +21,7 @@ Run `outpost help` whenever command discovery is needed or the user asks what Ou
 - Treat local repository context as a hint, not a constraint. A task may involve a different repository, multiple repositories, or no repository.
 - Do not monitor, attach to, clean up, stop, or delete the Outpost after launch.
 - Use the configured `default_host` unless the user specifies another host.
+- For a new Outpost, use 2 vCPU, 4 GiB RAM, and 8 GiB disk unless the user specifies different resources.
 - Unless the user specifies otherwise, launch `gpt-5.6-terra` with `medium` reasoning.
 - When the user asks for Sol, launch `gpt-5.6-sol` with `high` reasoning by default. Use `medium` reasoning instead when the user explicitly asks for Sol medium.
 
@@ -31,7 +32,7 @@ Before making changes or launching remote Pi:
 1. Interpret the user's task.
 2. Read `~/.config/outpost/config.json` to identify the configured hosts and `default_host`, then run `outpost --host <host> list` for the selected host.
 3. If the current directory is a Git repository, inspect its remote URL, current branch, and working-tree state for possible context.
-4. Determine the host, Outpost, tmux session name, model, reasoning level, repositories, clone paths, base branches, working branches, working directory, and exact prompt for remote Pi.
+4. Determine the host, Outpost, CPU, RAM, disk, tmux session name, model, reasoning level, repositories, clone paths, base branches, working branches, working directory, and exact prompt for remote Pi.
 5. If work would otherwise happen on `main` or `master`, propose a task-specific branch such as `outpost/<task-slug>`.
 6. If local changes are uncommitted or unavailable remotely and matter to the task, explain that in the plan and determine how they will be made available.
 
@@ -40,6 +41,7 @@ Present a confirmation in this form, adapting it for zero, one, or many reposito
 ```text
 Host: <host> (<default or explicitly selected>)
 Outpost: <name> (<existing or new>)
+Resources: <vCPU>, <RAM>, <disk>
 tmux session: <name>
 Model: <model>
 Reasoning: <level>
@@ -63,7 +65,7 @@ Do not create the Outpost, prepare repositories, bootstrap the VM, or launch Pi 
 
 After confirmation:
 
-1. Create the confirmed Outpost if needed, or start it if stopped.
+1. Create the confirmed Outpost if needed with `outpost --host <host> create <name> --cpus <count> --memory <size> --disk <size>`, or start it if stopped.
 2. Run the bootstrap helper:
 
 ```bash
