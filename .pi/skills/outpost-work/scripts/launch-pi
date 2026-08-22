@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
 
 if [[ $# -ne 5 ]]; then
   echo "usage: launch-pi <outpost> <tmux-name> <working-directory> <model> <reasoning>" >&2
