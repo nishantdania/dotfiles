@@ -21,7 +21,7 @@ Run `outpost help` whenever command discovery is needed or the user asks what Ou
 - Treat local repository context as a hint, not a constraint. A task may involve a different repository, multiple repositories, or no repository.
 - Do not monitor, attach to, clean up, stop, or delete the Outpost after launch.
 - Use the configured `default_host` unless the user specifies another host.
-- For a new Outpost, use 2 vCPU, 4 GiB RAM, and 8 GiB disk unless the user specifies different resources.
+- For a new Outpost, use 2 vCPU, 4 GiB RAM, and 8 GiB disk unless the user specifies different resources. In CLI commands, write these sizes as `--memory 4G --disk 8G`; Outpost accepts `M`, `MB`, `G`, or `GB`, not `MiB` or `GiB`.
 - Unless the user specifies otherwise, launch `gpt-5.6-terra` with `medium` reasoning.
 - When the user asks for Sol, launch `gpt-5.6-sol` with `high` reasoning by default. Use `medium` reasoning instead when the user explicitly asks for Sol medium.
 
@@ -65,7 +65,7 @@ Do not create the Outpost, prepare repositories, bootstrap the VM, or launch Pi 
 
 After confirmation:
 
-1. Create the confirmed Outpost if needed with `outpost --host <host> create <name> --cpus <count> --memory <size> --disk <size>`, or start it if stopped.
+1. Create the confirmed Outpost if needed with `outpost --host <host> create <name> --cpus <count> --memory <size> --disk <size>`, or start it if stopped. Convert display units to CLI units: for the default resources, the exact command flags are `--cpus 2 --memory 4G --disk 8G`. Never pass `MiB` or `GiB` suffixes.
 2. Run the bootstrap helper:
 
 ```bash
