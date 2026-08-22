@@ -2,16 +2,18 @@
 set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 
-if [[ $# -ne 1 ]]; then
-  echo "usage: bootstrap <outpost>" >&2
+if [[ $# -ne 2 ]]; then
+  echo "usage: bootstrap <host> <outpost>" >&2
   exit 2
 fi
 
-vm=$1
+host=$1
+vm=$2
+outpost=(outpost --host "$host")
 config=${OUTPOST_CONFIG:-$HOME/.config/outpost/config.json}
-ssh_host=$(jq -er '.ssh_host' "$config")
+ssh_host=$(jq -er --arg host "$host" 'if .hosts then .hosts[$host].ssh_host else .ssh_host end' "$config")
 
-record=$(outpost list | awk -F '\t' -v vm="$vm" '$1 == vm || $2 == vm { print $0; exit }')
+record=$("${outpost[@]}" list | awk -F '\t' -v vm="$vm" '$1 == vm || $2 == vm { print $0; exit }')
 if [[ -z $record ]]; then
   echo "outpost not found: $vm" >&2
   exit 1
@@ -19,10 +21,10 @@ fi
 id=$(printf '%s\n' "$record" | awk -F '\t' '{print $1}')
 status=$(printf '%s\n' "$record" | awk -F '\t' '{print $3}')
 if [[ $status != running ]]; then
-  outpost start "$id"
+  "${outpost[@]}" start "$id"
 fi
 
-outpost exec "$vm" 'set -eu
+"${outpost[@]}" exec "$vm" 'set -eu
 packages=""
 command -v curl >/dev/null 2>&1 || packages="$packages curl ca-certificates"
 command -v git >/dev/null 2>&1 || packages="$packages git"
@@ -40,7 +42,7 @@ if [[ -n $packages ]]; then
   rm -rf /var/lib/apt/lists/*
 fi'
 
-outpost exec "$vm" 'set -eu
+"${outpost[@]}" exec "$vm" 'set -eu
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 export TMPDIR="$HOME/.cache/outpost-tmp"
 mkdir -p "$TMPDIR"
@@ -70,25 +72,25 @@ else
 fi
 
 if { [[ $ssh_host == local ]] && [[ -s $HOME/.pi/agent/auth.json ]]; } || { [[ $ssh_host != local ]] && ssh "$ssh_host" 'test -s ~/.pi/agent/auth.json'; }; then
-  outpost copy --mode 600 "$pi_auth" "$vm:/root/.pi/agent/auth.json" >/dev/null
+  "${outpost[@]}" copy --mode 600 "$pi_auth" "$vm:/root/.pi/agent/auth.json" >/dev/null
 else
   echo "Pi authentication is missing on the Outpost host" >&2
   exit 1
 fi
 
 if { [[ $ssh_host == local ]] && [[ -s $HOME/.config/git/config ]]; } || { [[ $ssh_host != local ]] && ssh "$ssh_host" 'test -s ~/.config/git/config'; }; then
-  outpost copy --mode 600 "$git_config" "$vm:/root/.config/git/config" >/dev/null
+  "${outpost[@]}" copy --mode 600 "$git_config" "$vm:/root/.config/git/config" >/dev/null
 elif { [[ $ssh_host == local ]] && [[ -s $HOME/.gitconfig ]]; } || { [[ $ssh_host != local ]] && ssh "$ssh_host" 'test -s ~/.gitconfig'; }; then
-  outpost copy --mode 600 "$git_config_fallback" "$vm:/root/.gitconfig" >/dev/null
+  "${outpost[@]}" copy --mode 600 "$git_config_fallback" "$vm:/root/.gitconfig" >/dev/null
 fi
 
-if ! outpost exec "$vm" 'gh auth status --hostname github.com >/dev/null 2>&1' >/dev/null 2>&1; then
+if ! "${outpost[@]}" exec "$vm" 'gh auth status --hostname github.com >/dev/null 2>&1' >/dev/null 2>&1; then
   if [[ $ssh_host == local ]]; then
     gh auth token --hostname github.com
   else
     ssh "$ssh_host" 'gh auth token --hostname github.com'
-  fi | outpost exec -i "$vm" 'gh auth login --hostname github.com --git-protocol https --with-token' >/dev/null
+  fi | "${outpost[@]}" exec -i "$vm" 'gh auth login --hostname github.com --git-protocol https --with-token' >/dev/null
 fi
-outpost exec "$vm" 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"; gh auth setup-git; command -v git >/dev/null; command -v tmux >/dev/null; mise exec node@latest -- pi --version >/dev/null; gh auth status --hostname github.com >/dev/null 2>&1'
+"${outpost[@]}" exec "$vm" 'export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"; gh auth setup-git; command -v git >/dev/null; command -v tmux >/dev/null; mise exec node@latest -- pi --version >/dev/null; gh auth status --hostname github.com >/dev/null 2>&1'
 
 printf 'Bootstrapped %s\n' "$vm"

@@ -2,16 +2,18 @@
 set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 
-if [[ $# -ne 5 ]]; then
-  echo "usage: launch-pi <outpost> <tmux-name> <working-directory> <model> <reasoning>" >&2
+if [[ $# -ne 6 ]]; then
+  echo "usage: launch-pi <host> <outpost> <tmux-name> <working-directory> <model> <reasoning>" >&2
   exit 2
 fi
 
-vm=$1
-session=$2
-directory=$3
-model=$4
-reasoning=$5
+host=$1
+vm=$2
+session=$3
+directory=$4
+model=$5
+reasoning=$6
+outpost=(outpost --host "$host")
 
 if [[ ! $session =~ ^[a-zA-Z0-9_-]+$ ]]; then
   echo "tmux name may contain only letters, numbers, underscores, and hyphens" >&2
@@ -39,9 +41,9 @@ if [[ ! -s $prompt ]]; then
 fi
 
 prompt_path="/root/.outpost/prompts/$session"
-outpost copy --mode 600 "$prompt" "$vm:$prompt_path" >/dev/null
+"${outpost[@]}" copy --mode 600 "$prompt" "$vm:$prompt_path" >/dev/null
 
 directory64=$(printf '%s' "$directory" | base64 -w0)
-outpost exec "$vm" "set -eu; directory=\$(printf %s $directory64 | base64 -d); test -d \"\$directory\"; ! tmux has-session -t $session 2>/dev/null; tmux new-session -d -s $session -c \"\$directory\" 'exec /root/.local/bin/mise exec node@latest -- pi --model $model --thinking $reasoning \"\$(cat $prompt_path)\"'; tmux has-session -t $session"
+"${outpost[@]}" exec "$vm" "set -eu; directory=\$(printf %s $directory64 | base64 -d); test -d \"\$directory\"; ! tmux has-session -t $session 2>/dev/null; tmux new-session -d -s $session -c \"\$directory\" 'exec /root/.local/bin/mise exec node@latest -- pi --model $model --thinking $reasoning \"\$(cat $prompt_path)\"'; tmux has-session -t $session"
 
 printf 'Started %s in %s.\n' "$session" "$vm"
