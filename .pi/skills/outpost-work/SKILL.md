@@ -6,7 +6,7 @@ compatibility: Requires the outpost CLI, SSH access to the configured Outpost se
 
 # Outpost Work
 
-Outpost manages persistent Firecracker VMs on a remote server. The local Pi is a dispatcher: understand and confirm the plan, prepare an Outpost, start Pi in detached tmux, then forget the task. Do not monitor the remote Pi or wait for completion.
+Outpost manages persistent Firecracker VMs on a remote server. The local Pi is a dispatcher: understand and confirm the plan, prepare an Outpost, start Pi in detached tmux, then return without proactively waiting for completion. This is a default launch behavior, not a restriction on later requests.
 
 New Outposts are isolated. They need development tools plus explicit copies of Pi, Git, and GitHub authentication before remote work can use them. The bundled bootstrap script performs that repetitive setup without printing credentials.
 
@@ -20,7 +20,7 @@ Run `outpost help` whenever command discovery is needed or the user asks what Ou
 - Never print credentials or use shell tracing during credential provisioning.
 - Treat local repository context as a hint, not a constraint. A task may involve a different repository, multiple repositories, or no repository.
 - The guest user is `root` and its home is `/root`. Never assume `/home/pi` or a `pi` Unix user exists. For work without a repository, default to `/root`. For repositories, default to `/root/<repository-name>` unless the user requests another path.
-- Do not monitor, attach to, clean up, stop, or delete the Outpost after launch.
+- After launch, do not proactively monitor, attach, clean up, stop, or delete anything. If the user explicitly asks to check output, inspect status, attach, stop, delete, or otherwise interact with the launched work, comply normally. Never refuse a follow-up because the initial workflow is fire-and-forget.
 - Use the configured `default_host` unless the user specifies another host.
 - For a new Outpost, use 2 vCPU, 4 GiB RAM, and 8 GiB disk unless the user specifies different resources. In CLI commands, write these sizes as `--memory 4G --disk 8G`; Outpost accepts `M`, `MB`, `G`, or `GB`, not `MiB` or `GiB`.
 - Unless the user specifies otherwise, launch `gpt-5.6-terra` with `medium` reasoning.
@@ -90,3 +90,5 @@ Use a safe method such as a quoted heredoc instead of shell interpolation when t
 ```text
 Started <tmux-name> in <outpost>.
 ```
+
+On later turns, follow the user's request normally. For example, when asked what remote Pi said, inspect it with `outpost --host <host> exec <outpost> 'tmux capture-pane -pt <tmux-name> -S -50'` and report the output.
