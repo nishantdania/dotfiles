@@ -5,18 +5,18 @@ skill_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/home/.pi/agent" "$tmp/home/.config/git" "$tmp/scripts"
-log=$tmp/ark.log
+log=$tmp/outpost.log
 state=$tmp/state
 secret='super-secret-token'
 printf '%s' 'pi-auth' > "$tmp/home/.pi/agent/auth.json"
 printf '%s' '[user]\nname = Test' > "$tmp/home/.config/git/config"
 
-cat > "$tmp/bin/ark" <<'EOF'
+cat > "$tmp/bin/outpost" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 for argument in "$@"; do
   if [[ $argument =~ [[:cntrl:]] ]]; then
-    echo 'control character in Ark argument' >&2
+    echo 'control character in Outpost argument' >&2
     exit 64
   fi
 done
@@ -24,22 +24,22 @@ stdin_file=$(mktemp)
 trap 'rm -f "$stdin_file"' EXIT
 cat > "$stdin_file"
 stdin_hash=$(sha256sum "$stdin_file" | awk '{print $1}')
-printf 'argv:' >> "$FAKE_ARK_LOG"
-printf ' %q' "$@" >> "$FAKE_ARK_LOG"
-printf ' stdin-sha256:%s' "$stdin_hash" >> "$FAKE_ARK_LOG"
+printf 'argv:' >> "$FAKE_OUTPOST_LOG"
+printf ' %q' "$@" >> "$FAKE_OUTPOST_LOG"
+printf ' stdin-sha256:%s' "$stdin_hash" >> "$FAKE_OUTPOST_LOG"
 if [[ $1 == copy ]]; then
-  printf ' source-sha256:%s' "$(sha256sum "$2" | awk '{print $1}')" >> "$FAKE_ARK_LOG"
+  printf ' source-sha256:%s' "$(sha256sum "$2" | awk '{print $1}')" >> "$FAKE_OUTPOST_LOG"
 fi
 if [[ $1 == exec ]] && [[ $# -ge 5 ]] && [[ $4 == bash && $5 == -seu ]]; then
-  cp "$stdin_file" "$FAKE_ARK_SCRIPTS/$stdin_hash"
-  printf ' streamed-script:%s' "$stdin_hash" >> "$FAKE_ARK_LOG"
+  cp "$stdin_file" "$FAKE_OUTPOST_SCRIPTS/$stdin_hash"
+  printf ' streamed-script:%s' "$stdin_hash" >> "$FAKE_OUTPOST_LOG"
 fi
-printf '\n' >> "$FAKE_ARK_LOG"
+printf '\n' >> "$FAKE_OUTPOST_LOG"
 if [[ $# -ge 3 ]] && [[ $1 == --output && $2 == json && $3 == inspect ]]; then
-  printf '{"status":"%s"}\n' "$FAKE_ARK_STATUS"
+  printf '{"status":"%s"}\n' "$FAKE_OUTPOST_STATUS"
 fi
-if [[ $1 == exec && " $* " == *' gh auth status '* && ! -e $FAKE_ARK_STATE ]]; then
-  : > "$FAKE_ARK_STATE"
+if [[ $1 == exec && " $* " == *' gh auth status '* && ! -e $FAKE_OUTPOST_STATE ]]; then
+  : > "$FAKE_OUTPOST_STATE"
   exit 1
 fi
 EOF
@@ -49,25 +49,25 @@ if [[ \$1 == auth && \$2 == token ]]; then
   printf '%s\\n' '$secret'
 fi
 EOF
-chmod 700 "$tmp/bin/ark" "$tmp/bin/gh"
+chmod 700 "$tmp/bin/outpost" "$tmp/bin/gh"
 
 export PATH="$tmp/bin:$PATH"
 export HOME=$tmp/home
-unset ARK_SERVER ARK_TOKEN ARK_SSH_PROXY_JUMP
-export FAKE_ARK_LOG=$log
-export FAKE_ARK_STATE=$state
-export FAKE_ARK_SCRIPTS=$tmp/scripts
+unset OUTPOST_SERVER OUTPOST_TOKEN OUTPOST_SSH_PROXY_JUMP
+export FAKE_OUTPOST_LOG=$log
+export FAKE_OUTPOST_STATE=$state
+export FAKE_OUTPOST_SCRIPTS=$tmp/scripts
 
-export FAKE_ARK_STATUS=stopped
+export FAKE_OUTPOST_STATUS=stopped
 bootstrap_output=$("$skill_dir/bootstrap" demo 2>&1)
-export FAKE_ARK_STATUS=running
+export FAKE_OUTPOST_STATUS=running
 running_output=$("$skill_dir/bootstrap" demo 2>&1)
-export FAKE_ARK_STATUS=provisioning
+export FAKE_OUTPOST_STATUS=provisioning
 if "$skill_dir/bootstrap" demo >/dev/null 2>&1; then
   echo 'unsupported lifecycle status was accepted' >&2
   exit 1
 fi
-export FAKE_ARK_STATUS=running
+export FAKE_OUTPOST_STATUS=running
 launch_output=$(printf 'do the work' | "$skill_dir/launch-pi" demo work-8 /root/repo gpt-5.6-terra medium 2>&1)
 
 expected_token_hash=$(printf '%s\n' "$secret" | sha256sum | awk '{print $1}')
@@ -75,11 +75,11 @@ expected_prompt_hash=$(printf '%s' 'do the work' | sha256sum | awk '{print $1}')
 grep -Eq '^argv: --output json inspect demo stdin-sha256:' "$log"
 [[ $(grep -Fc 'argv: start demo stdin-sha256:' "$log") -eq 1 ]]
 grep -Eq '^argv: exec demo -- bash -seu stdin-sha256:.*streamed-script:' "$log"
-grep -Eq '^argv: exec demo -- bash -seu -- work-8 /root/repo gpt-5\.6-terra medium /root/\.ark-work/prompts/work-8 stdin-sha256:.*streamed-script:' "$log"
+grep -Eq '^argv: exec demo -- bash -seu -- work-8 /root/repo gpt-5\.6-terra medium /root/\.outpost-work/prompts/work-8 stdin-sha256:.*streamed-script:' "$log"
 grep -Eq '^argv: copy .+ demo:/root/\.pi/agent/auth\.json stdin-sha256:' "$log"
-grep -Eq '^argv: copy .+ demo:/root/\.ark-work/prompts/work-8 stdin-sha256:.*source-sha256:'"$expected_prompt_hash"'$' "$log"
+grep -Eq '^argv: copy .+ demo:/root/\.outpost-work/prompts/work-8 stdin-sha256:.*source-sha256:'"$expected_prompt_hash"'$' "$log"
 grep -Fq 'argv: exec demo -- chmod 600 /root/.pi/agent/auth.json' "$log"
-grep -Fq 'argv: exec demo -- chmod 600 /root/.ark-work/prompts/work-8' "$log"
+grep -Fq 'argv: exec demo -- chmod 600 /root/.outpost-work/prompts/work-8' "$log"
 grep -Fq "stdin-sha256:$expected_token_hash" "$log"
 grep -RlF 'apt-get install -y --no-install-recommends' "$tmp/scripts" >/dev/null
 grep -RlF 'mise use --global node@latest' "$tmp/scripts" >/dev/null
@@ -93,7 +93,7 @@ if grep -Fq -- "$secret" "$log" || [[ $bootstrap_output$running_output$launch_ou
 fi
 
 if "$skill_dir/bootstrap" 'bad name' >/dev/null 2>&1; then
-  echo 'invalid Ark name was accepted' >&2
+  echo 'invalid Outpost name was accepted' >&2
   exit 1
 fi
 if printf 'prompt' | "$skill_dir/launch-pi" demo 'bad name' /root gpt-5.6-terra medium >/dev/null 2>&1; then
@@ -117,4 +117,4 @@ if printf 'prompt' | "$skill_dir/launch-pi" demo valid /root gpt-5.6-terra inval
   exit 1
 fi
 
-echo 'ark-work script tests passed'
+echo 'outpost-work script tests passed'

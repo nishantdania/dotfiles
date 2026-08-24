@@ -6,37 +6,37 @@ case $- in
 esac
 
 if [[ $# -ne 1 ]]; then
-  echo "usage: bootstrap <ark>" >&2
+  echo "usage: bootstrap <outpost>" >&2
   exit 2
 fi
 
-ark_name=$1
-if [[ ! $ark_name =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
-  echo "invalid Ark name" >&2
+outpost_name=$1
+if [[ ! $outpost_name =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
+  echo "invalid Outpost name" >&2
   exit 2
 fi
-if ! command -v ark >/dev/null 2>&1; then
-  echo "ark CLI is not installed" >&2
+if ! command -v outpost >/dev/null 2>&1; then
+  echo "outpost CLI is not installed" >&2
   exit 1
 fi
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is not installed" >&2
   exit 1
 fi
-if ! status=$(ark --output json inspect "$ark_name" | jq -er 'if type == "object" and (.status | type) == "string" then .status else error("expected an object with a string status") end'); then
-  echo "could not parse Ark inspect status for $ark_name" >&2
+if ! status=$(outpost --output json inspect "$outpost_name" | jq -er 'if type == "object" and (.status | type) == "string" then .status else error("expected an object with a string status") end'); then
+  echo "could not parse Outpost inspect status for $outpost_name" >&2
   exit 1
 fi
 case $status in
   running) ;;
-  stopped) ark start "$ark_name" >/dev/null ;;
+  stopped) outpost start "$outpost_name" >/dev/null ;;
   *)
-    echo "Ark $ark_name has unsupported lifecycle status: $status (expected running or stopped)" >&2
+    echo "Outpost $outpost_name has unsupported lifecycle status: $status (expected running or stopped)" >&2
     exit 1
     ;;
 esac
 
-ark exec "$ark_name" -- bash -seu <<'EOF'
+outpost exec "$outpost_name" -- bash -seu <<'EOF'
 packages=()
 command -v curl >/dev/null 2>&1 || packages+=(curl ca-certificates)
 command -v git >/dev/null 2>&1 || packages+=(git)
@@ -55,9 +55,9 @@ if ((${#packages[@]})); then
 fi
 EOF
 
-ark exec "$ark_name" -- bash -seu <<'EOF'
+outpost exec "$outpost_name" -- bash -seu <<'EOF'
 export PATH="/root/.local/bin:/root/.local/share/mise/shims:$PATH"
-export TMPDIR="/root/.cache/ark-work-tmp"
+export TMPDIR="/root/.cache/outpost-work-tmp"
 mkdir -p "$TMPDIR"
 if ! command -v mise >/dev/null 2>&1; then
   curl -fsSL https://mise.run | sh >/dev/null
@@ -81,8 +81,8 @@ if [[ ! -s $pi_auth ]]; then
   echo "local Pi authentication is missing: $pi_auth" >&2
   exit 1
 fi
-ark copy "$pi_auth" "$ark_name:/root/.pi/agent/auth.json" >/dev/null
-ark exec "$ark_name" -- chmod 600 /root/.pi/agent/auth.json
+outpost copy "$pi_auth" "$outpost_name:/root/.pi/agent/auth.json" >/dev/null
+outpost exec "$outpost_name" -- chmod 600 /root/.pi/agent/auth.json
 
 git_config=$HOME/.config/git/config
 git_target=/root/.config/git/config
@@ -91,19 +91,19 @@ if [[ ! -s $git_config ]]; then
   git_target=/root/.gitconfig
 fi
 if [[ -s $git_config ]]; then
-  ark copy "$git_config" "$ark_name:$git_target" >/dev/null
-  ark exec "$ark_name" -- chmod 600 "$git_target"
+  outpost copy "$git_config" "$outpost_name:$git_target" >/dev/null
+  outpost exec "$outpost_name" -- chmod 600 "$git_target"
 fi
 
-if ! ark exec "$ark_name" -- gh auth status --hostname github.com >/dev/null 2>&1; then
+if ! outpost exec "$outpost_name" -- gh auth status --hostname github.com >/dev/null 2>&1; then
   if ! command -v gh >/dev/null 2>&1; then
     echo "GitHub CLI is not installed locally" >&2
     exit 1
   fi
-  gh auth token --hostname github.com | ark exec "$ark_name" -- gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
+  gh auth token --hostname github.com | outpost exec "$outpost_name" -- gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
 fi
 
-ark exec "$ark_name" -- bash -seu <<'EOF'
+outpost exec "$outpost_name" -- bash -seu <<'EOF'
 export PATH="/root/.local/bin:/root/.local/share/mise/shims:$PATH"
 gh auth setup-git
 git config --global url.https://github.com/.insteadOf http://github.com/
@@ -113,4 +113,4 @@ mise exec node@latest -- pi --version >/dev/null
 gh auth status --hostname github.com >/dev/null 2>&1
 EOF
 
-printf 'Bootstrapped %s\n' "$ark_name"
+printf 'Bootstrapped %s\n' "$outpost_name"
