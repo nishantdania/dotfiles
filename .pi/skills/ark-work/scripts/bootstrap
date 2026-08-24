@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case $- in
+  *x*) echo "bootstrap must not run with shell tracing enabled" >&2; exit 2 ;;
+esac
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: bootstrap <ark>" >&2
+  exit 2
+fi
+
+ark_name=$1
+if [[ ! $ark_name =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
+  echo "invalid Ark name" >&2
+  exit 2
+fi
+if ! command -v ark >/dev/null 2>&1; then
+  echo "ark CLI is not installed" >&2
+  exit 1
+fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is not installed" >&2
+  exit 1
+fi
+: "${ARK_SERVER:?ARK_SERVER must be set}"
+: "${ARK_TOKEN:?ARK_TOKEN must be set}"
+
+if ! status=$(ark --output json inspect "$ark_name" | jq -er 'if type == "object" and (.status | type) == "string" then .status else error("expected an object with a string status") end'); then
+  echo "could not parse Ark inspect status for $ark_name" >&2
+  exit 1
+fi
+case $status in
+  running) ;;
+  stopped) ark start "$ark_name" >/dev/null ;;
+  *)
+    echo "Ark $ark_name has unsupported lifecycle status: $status (expected running or stopped)" >&2
+    exit 1
+    ;;
+esac
+
+ark exec "$ark_name" -- bash -seu <<'EOF'
+packages=()
+command -v curl >/dev/null 2>&1 || packages+=(curl ca-certificates)
+command -v git >/dev/null 2>&1 || packages+=(git)
+command -v gh >/dev/null 2>&1 || packages+=(gh)
+command -v tmux >/dev/null 2>&1 || packages+=(tmux)
+command -v xz >/dev/null 2>&1 || packages+=(xz-utils)
+ldconfig -p 2>/dev/null | grep -q libatomic.so.1 || packages+=(libatomic1)
+if ((${#packages[@]})); then
+  export DEBIAN_FRONTEND=noninteractive
+  dpkg --configure -a >/dev/null 2>&1 || true
+  apt-get clean
+  apt-get update >/dev/null
+  apt-get install -y --no-install-recommends "${packages[@]}" >/dev/null
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+fi
+EOF
+
+ark exec "$ark_name" -- bash -seu <<'EOF'
+export PATH="/root/.local/bin:/root/.local/share/mise/shims:$PATH"
+export TMPDIR="/root/.cache/ark-work-tmp"
+mkdir -p "$TMPDIR"
+if ! command -v mise >/dev/null 2>&1; then
+  curl -fsSL https://mise.run | sh >/dev/null
+fi
+mise use --global node@latest >/dev/null
+mise reshim
+activation='export PATH="/root/.local/bin:/root/.local/share/mise/shims:$PATH"'
+touch /root/.bashrc /root/.bash_profile
+grep -Fqx "$activation" /root/.bashrc || printf "%s\n" "$activation" >> /root/.bashrc
+grep -Fqx 'source /root/.bashrc' /root/.bash_profile || printf "%s\n" 'source /root/.bashrc' >> /root/.bash_profile
+if ! mise exec node@latest -- pi --version >/dev/null 2>&1; then
+  mise exec node@latest -- bash -ceu 'curl -fsSL https://pi.dev/install.sh | sh >/dev/null'
+  mise reshim
+fi
+mkdir -p /root/.pi/agent /root/.config/git
+chmod 700 /root/.pi /root/.pi/agent /root/.config /root/.config/git
+EOF
+
+pi_auth=$HOME/.pi/agent/auth.json
+if [[ ! -s $pi_auth ]]; then
+  echo "local Pi authentication is missing: $pi_auth" >&2
+  exit 1
+fi
+ark copy "$pi_auth" "$ark_name:/root/.pi/agent/auth.json" >/dev/null
+ark exec "$ark_name" -- chmod 600 /root/.pi/agent/auth.json
+
+git_config=$HOME/.config/git/config
+git_target=/root/.config/git/config
+if [[ ! -s $git_config ]]; then
+  git_config=$HOME/.gitconfig
+  git_target=/root/.gitconfig
+fi
+if [[ -s $git_config ]]; then
+  ark copy "$git_config" "$ark_name:$git_target" >/dev/null
+  ark exec "$ark_name" -- chmod 600 "$git_target"
+fi
+
+if ! ark exec "$ark_name" -- gh auth status --hostname github.com >/dev/null 2>&1; then
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "GitHub CLI is not installed locally" >&2
+    exit 1
+  fi
+  gh auth token --hostname github.com | ark exec "$ark_name" -- gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
+fi
+
+ark exec "$ark_name" -- bash -seu <<'EOF'
+export PATH="/root/.local/bin:/root/.local/share/mise/shims:$PATH"
+gh auth setup-git
+command -v git >/dev/null
+command -v tmux >/dev/null
+mise exec node@latest -- pi --version >/dev/null
+gh auth status --hostname github.com >/dev/null 2>&1
+EOF
+
+printf 'Bootstrapped %s\n' "$ark_name"

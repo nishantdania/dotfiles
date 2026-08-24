@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case $- in
+  *x*) echo "launch-pi must not run with shell tracing enabled" >&2; exit 2 ;;
+esac
+
+if [[ $# -ne 5 ]]; then
+  echo "usage: launch-pi <ark> <tmux-name> <working-directory> <model> <reasoning>" >&2
+  exit 2
+fi
+
+ark_name=$1
+session=$2
+directory=$3
+model=$4
+reasoning=$5
+
+if ! command -v ark >/dev/null 2>&1; then
+  echo "ark CLI is not installed" >&2
+  exit 1
+fi
+: "${ARK_SERVER:?ARK_SERVER must be set}"
+: "${ARK_TOKEN:?ARK_TOKEN must be set}"
+if [[ ! $ark_name =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
+  echo "invalid Ark name" >&2
+  exit 2
+fi
+if [[ ! $session =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo "tmux name may contain only letters, numbers, underscores, and hyphens" >&2
+  exit 2
+fi
+if [[ $directory != /* || $directory =~ [[:cntrl:]] ]]; then
+  echo "working directory must be an absolute path without control characters" >&2
+  exit 2
+fi
+if [[ ! $model =~ ^[a-zA-Z0-9._:/-]+$ ]]; then
+  echo "invalid model" >&2
+  exit 2
+fi
+case $reasoning in
+  off|minimal|low|medium|high|xhigh|max) ;;
+  *) echo "invalid reasoning level" >&2; exit 2 ;;
+esac
+
+umask 077
+prompt=$(mktemp)
+trap 'rm -f "$prompt"' EXIT
+cat > "$prompt"
+if [[ ! -s $prompt ]]; then
+  echo "remote Pi prompt is empty" >&2
+  exit 2
+fi
+
+prompt_dir=/root/.ark-work/prompts
+prompt_path=$prompt_dir/$session
+ark exec "$ark_name" -- mkdir -p "$prompt_dir"
+ark exec "$ark_name" -- chmod 700 /root/.ark-work "$prompt_dir"
+ark copy "$prompt" "$ark_name:$prompt_path" >/dev/null
+ark exec "$ark_name" -- chmod 600 "$prompt_path"
+ark exec "$ark_name" -- test -d "$directory"
+
+ark exec "$ark_name" -- bash -seu -- "$session" "$directory" "$model" "$reasoning" "$prompt_path" <<'EOF'
+if tmux has-session -t "$1" 2>/dev/null; then
+  echo "tmux session already exists: $1" >&2
+  exit 1
+fi
+tmux new-session -d -s "$1" -c "$2" bash -ceu 'exec /root/.local/bin/mise exec node@latest -- pi --model "$1" --thinking "$2" "$(cat "$3")"' bash "$3" "$4" "$5"
+tmux has-session -t "$1"
+EOF
+
+printf 'Started %s in %s.\n' "$session" "$ark_name"
