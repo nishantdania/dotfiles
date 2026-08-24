@@ -42,6 +42,7 @@ command -v curl >/dev/null 2>&1 || packages+=(curl ca-certificates)
 command -v git >/dev/null 2>&1 || packages+=(git)
 command -v gh >/dev/null 2>&1 || packages+=(gh)
 command -v tmux >/dev/null 2>&1 || packages+=(tmux)
+command -v tic >/dev/null 2>&1 || packages+=(ncurses-bin)
 command -v xz >/dev/null 2>&1 || packages+=(xz-utils)
 ldconfig -p 2>/dev/null | grep -q libatomic.so.1 || packages+=(libatomic1)
 if ((${#packages[@]})); then
@@ -54,6 +55,19 @@ if ((${#packages[@]})); then
   rm -rf /var/lib/apt/lists/*
 fi
 EOF
+
+# Make tmux usable from Ghostty, whose terminfo is not provided by base images.
+# Keep this best-effort so a host without the Ghostty entry remains supported.
+if command -v infocmp >/dev/null 2>&1 && infocmp -x xterm-ghostty >/dev/null 2>&1; then
+  local_terminfo=$(mktemp)
+  remote_terminfo="/tmp/outpost-work-terminfo-$$"
+  trap 'rm -f "$local_terminfo"' EXIT
+  infocmp -x xterm-ghostty >"$local_terminfo"
+  outpost copy "$local_terminfo" "$outpost_name:$remote_terminfo" >/dev/null
+  outpost exec "$outpost_name" -- sh -ceu 'mkdir -p /root/.terminfo; tic -x -o /root/.terminfo "$1"; rm -f "$1"' sh "$remote_terminfo"
+  rm -f "$local_terminfo"
+  trap - EXIT
+fi
 
 outpost exec "$outpost_name" -- bash -seu <<'EOF'
 export PATH="/root/.local/bin:/root/.local/share/mise/shims:$PATH"

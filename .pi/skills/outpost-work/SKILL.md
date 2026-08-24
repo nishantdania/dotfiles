@@ -75,7 +75,7 @@ After confirmation:
    ~/.pi/agent/skills/outpost-work/scripts/bootstrap <outpost>
    ```
 
-   It idempotently installs Git, GitHub CLI, tmux, xz, libatomic, mise, the latest Node.js, and Pi. It explicitly copies local Pi authentication and Git configuration to `/root` with secure modes, and pipes local GitHub authentication to the guest without logging it.
+   It idempotently installs Git, GitHub CLI, tmux, ncurses terminfo tools, xz, libatomic, mise, the latest Node.js, and Pi. It also installs the local Ghostty (`xterm-ghostty`) terminfo entry when available, so tmux can be attached from Ghostty. It explicitly copies local Pi authentication and Git configuration to `/root` with secure modes, and pipes local GitHub authentication to the guest without logging it.
 3. Prepare repositories with `outpost exec <name> -- ...` according to the confirmed plan. Clone or fetch each repository and create or check out its confirmed working branch. Repository and branch policy remains dispatcher reasoning, not helper behavior.
 4. Verify the exact confirmed working directory exists with `outpost exec <name> -- test -d <path>`. For repository work it must be the prepared clone; otherwise use `/root` or create the confirmed directory explicitly.
 5. Send the exact confirmed prompt to the launch helper on stdin:
