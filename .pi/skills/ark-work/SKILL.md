@@ -1,14 +1,14 @@
 ---
 name: ark-work
 description: Dispatch durable coding, research, and exploration work to persistent Ark VMs. Use when the user wants remote work that continues after the local Pi session or laptop disconnects.
-compatibility: Requires Bash, jq, and a locally installed, configured ark CLI. Set ARK_SERVER and ARK_TOKEN; set ARK_SSH_PROXY_JUMP when guest access requires a jump host.
+compatibility: Requires Bash, jq, and a locally installed, configured ark CLI.
 ---
 
 # Ark Work
 
 Ark manages persistent VMs. The local Pi dispatches confirmed work to an Ark, starts remote Pi in detached tmux, and returns without waiting. This fire-and-forget launch behavior does not restrict normal inspection or lifecycle requests later.
 
-Before using this skill, verify local `ark` and `jq` are installed and that `ark` is configured. `ARK_SERVER` and `ARK_TOKEN` are required. Set `ARK_SSH_PROXY_JUMP` when the Ark guests are reachable only through a jump host. The bootstrap helper structurally parses `ark --output json inspect` with `jq` and accepts only `running` or `stopped`; it starts only `stopped` Arks. Use Ark's JSON output for listings: `ark --output json list`.
+Before using this skill, verify local `ark` and `jq` are installed and that `ark` is configured. The standard installer-managed `ark` wrapper loads `~/.config/ark/server.env` automatically; manually exported Ark variables also remain supported. The bootstrap helper structurally parses `ark --output json inspect` with `jq` and accepts only `running` or `stopped`; it starts only `stopped` Arks. Use Ark's JSON output for listings: `ark --output json list`.
 
 Run `ark --help` when command discovery is needed or the user asks what Ark supports.
 
@@ -18,6 +18,7 @@ Run `ark --help` when command discovery is needed or the user asks what Ark supp
 - Always run remote Pi in detached tmux.
 - Never work directly on `main` or `master` unless the user explicitly requests it.
 - Never print credentials, put secrets in command arguments, or use shell tracing during credential provisioning.
+- Use authenticated HTTPS or SSH GitHub URLs. Normalize `http://github.com/` URLs to `https://github.com/`; never clone credentials over plain HTTP.
 - Treat local repository context as a hint, not a constraint. A task may involve different, multiple, or no repositories.
 - Use Ark names in `ark create`, `ark start`, `ark stop`, `ark delete`, `ark ssh`, `ark exec`, and `ark copy`; do not look up or rely on IDs.
 - The guest user and home are `root` and `/root`. For work without a repository, default to `/root`; for repositories, default to `/root/<repository-name>` unless requested otherwise.

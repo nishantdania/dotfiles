@@ -23,9 +23,6 @@ if ! command -v jq >/dev/null 2>&1; then
   echo "jq is not installed" >&2
   exit 1
 fi
-: "${ARK_SERVER:?ARK_SERVER must be set}"
-: "${ARK_TOKEN:?ARK_TOKEN must be set}"
-
 if ! status=$(ark --output json inspect "$ark_name" | jq -er 'if type == "object" and (.status | type) == "string" then .status else error("expected an object with a string status") end'); then
   echo "could not parse Ark inspect status for $ark_name" >&2
   exit 1
@@ -109,6 +106,7 @@ fi
 ark exec "$ark_name" -- bash -seu <<'EOF'
 export PATH="/root/.local/bin:/root/.local/share/mise/shims:$PATH"
 gh auth setup-git
+git config --global url.https://github.com/.insteadOf http://github.com/
 command -v git >/dev/null
 command -v tmux >/dev/null
 mise exec node@latest -- pi --version >/dev/null

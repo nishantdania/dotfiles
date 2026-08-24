@@ -20,8 +20,6 @@ if ! command -v ark >/dev/null 2>&1; then
   echo "ark CLI is not installed" >&2
   exit 1
 fi
-: "${ARK_SERVER:?ARK_SERVER must be set}"
-: "${ARK_TOKEN:?ARK_TOKEN must be set}"
 if [[ ! $ark_name =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
   echo "invalid Ark name" >&2
   exit 2

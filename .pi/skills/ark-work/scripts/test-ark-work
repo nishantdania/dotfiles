@@ -53,9 +53,7 @@ chmod 700 "$tmp/bin/ark" "$tmp/bin/gh"
 
 export PATH="$tmp/bin:$PATH"
 export HOME=$tmp/home
-export ARK_SERVER=https://ark.example
-export ARK_TOKEN=client-token
-export ARK_SSH_PROXY_JUMP=jump.example
+unset ARK_SERVER ARK_TOKEN ARK_SSH_PROXY_JUMP
 export FAKE_ARK_LOG=$log
 export FAKE_ARK_STATE=$state
 export FAKE_ARK_SCRIPTS=$tmp/scripts
@@ -86,7 +84,9 @@ grep -Fq "stdin-sha256:$expected_token_hash" "$log"
 grep -RlF 'apt-get install -y --no-install-recommends' "$tmp/scripts" >/dev/null
 grep -RlF 'mise use --global node@latest' "$tmp/scripts" >/dev/null
 grep -RlF 'tmux new-session -d -s' "$tmp/scripts" >/dev/null
-grep -RlF 'pi --model "$1" --thinking "$2"' "$tmp/scripts" >/dev/null
+pi_launch="pi --model \"\$1\" --thinking \"\$2\""
+grep -RlF "$pi_launch" "$tmp/scripts" >/dev/null
+grep -RlF 'url.https://github.com/.insteadOf http://github.com/' "$tmp/scripts" >/dev/null
 if grep -Fq -- "$secret" "$log" || [[ $bootstrap_output$running_output$launch_output == *"$secret"* ]]; then
   echo 'secret was emitted' >&2
   exit 1
