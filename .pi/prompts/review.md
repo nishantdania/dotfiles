@@ -116,6 +116,17 @@ Provide your findings in a clear, structured format:
 
 Output all findings the author would fix if they knew about them. If there are no qualifying findings, explicitly state the code looks good. Don't stop at the first finding - list every qualifying issue. Then append the required non-blocking callouts section.
 
+## GitHub pull requests
+
+When the review target is a GitHub pull request:
+
+1. Record the current Git branch.
+2. Check for staged, unstaged, and untracked changes with `git status --porcelain`.
+3. If changes exist, stash them with `git stash push --include-untracked -m "pi-review: before PR checkout"`.
+4. Confirm the stash succeeded and the working tree is clean.
+5. Check out the pull request with `gh pr checkout <PR number>`.
+6. Do not automatically pop or delete the stash. Report the original branch and created stash so they can be restored safely later.
+
 ---
 
 Please perform a code review with the following focus:
