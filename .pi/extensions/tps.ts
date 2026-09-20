@@ -27,6 +27,7 @@ export default function (pi: ExtensionAPI) {
 		let cacheRead = 0;
 		let cacheWrite = 0;
 		let totalTokens = 0;
+		let cost = 0;
 
 		for (const message of event.messages) {
 			if (!isAssistantMessage(message)) continue;
@@ -35,13 +36,14 @@ export default function (pi: ExtensionAPI) {
 			cacheRead += message.usage.cacheRead || 0;
 			cacheWrite += message.usage.cacheWrite || 0;
 			totalTokens += message.usage.totalTokens || 0;
+			cost += message.usage.cost?.total || 0;
 		}
 
 		if (output <= 0) return;
 
 		const elapsedSeconds = elapsedMs / 1000;
 		const tokensPerSecond = output / elapsedSeconds;
-		const message = `TPS ${tokensPerSecond.toFixed(1)} tok/s. out ${output.toLocaleString()}, in ${input.toLocaleString()}, cache r/w ${cacheRead.toLocaleString()}/${cacheWrite.toLocaleString()}, total ${totalTokens.toLocaleString()}, ${elapsedSeconds.toFixed(1)}s`;
+		const message = `${tokensPerSecond.toFixed(1)} tok/s, ${elapsedSeconds.toFixed(1)}s, $${cost.toFixed(4)}`;
 		ctx.ui.notify(message, "info");
 	});
 }
